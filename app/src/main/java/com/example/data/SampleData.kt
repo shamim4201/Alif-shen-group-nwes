@@ -1,7 +1,12 @@
 package com.example.data
 
 object SampleData {
-    val initialArticles = listOf(
+    private val now: Long get() = System.currentTimeMillis()
+    private const val MINUTE_MS = 60 * 1000L
+    private const val HOUR_MS = 60 * MINUTE_MS
+    private const val DAY_MS = 24 * HOUR_MS
+
+    val initialArticles: List<NewsArticle> get() = listOf(
         // Hero Grid Articles
         NewsArticle(
             id = 1,
@@ -12,7 +17,7 @@ object SampleData {
 From grassroots community initiatives to investigative journalism uncovering institutional failures, the courage to speak up when consensus is comfortable has repeatedly shifted historical tides. This comprehensive chronicle explores the modern pioneers who refuse to conform and in doing so, define our cultural future.""",
             category = "Life Style",
             author = "Tony Stark",
-            publishedAt = 1477700000000L, // Oct 29, 2016 (Top Featured Article)
+            publishedAt = now - 18 * MINUTE_MS, // 18 mins ago
             imageUrl = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80",
             isBreaking = true,
             isBookmarked = false,
@@ -31,7 +36,7 @@ From grassroots community initiatives to investigative journalism uncovering ins
 Psychological research underscores that individuals who navigate early professional failures with humility develop significantly higher adaptive intelligence than those blessed with immediate, effortless success.""",
             category = "Travel",
             author = "Tony Stark",
-            publishedAt = 1477612800000L, // Oct 28, 2016
+            publishedAt = now - 45 * MINUTE_MS, // 45 mins ago
             imageUrl = "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&q=80",
             isBreaking = true,
             isBookmarked = true,
@@ -50,7 +55,7 @@ Psychological research underscores that individuals who navigate early professio
 Athletes and cycling federations voiced deep regret, calling for modernized revenue-sharing frameworks to safeguard regional sports ecosystems.""",
             category = "Travel",
             author = "Tony Stark",
-            publishedAt = 1477353600000L, // Oct 25, 2016
+            publishedAt = now - 2 * HOUR_MS, // 2 hours ago
             imageUrl = "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800&q=80",
             isBreaking = true,
             isBookmarked = false,
@@ -69,7 +74,7 @@ Athletes and cycling federations voiced deep regret, calling for modernized reve
 By neutralizing the app chrome with pure white and black accents, the redesign directs 100% of viewer attention toward high-definition user photography and cinematic reels.""",
             category = "Technology",
             author = "Danny Rand",
-            publishedAt = 1477008000000L, // Oct 21, 2016
+            publishedAt = now - 3 * HOUR_MS - 30 * MINUTE_MS, // ~3.5 hours ago
             imageUrl = "https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?w=800&q=80",
             isBreaking = false,
             isBookmarked = false,
@@ -90,7 +95,7 @@ By neutralizing the app chrome with pure white and black accents, the redesign d
 Sociological surveys indicate that cultures prioritizing collective welfare and charitable sharing consistently report higher happiness and cohesion metrics than hyper-competitive economic systems.""",
             category = "Creative",
             author = "Tony Stark",
-            publishedAt = 1476921600000L, // Oct 20, 2016
+            publishedAt = now - 5 * HOUR_MS, // 5 hours ago
             imageUrl = "https://images.unsplash.com/photo-1516627145497-ae6968895b74?w=800&q=80",
             isBreaking = true,
             isBookmarked = false,
@@ -109,7 +114,7 @@ Sociological surveys indicate that cultures prioritizing collective welfare and 
 We tested ten leading contenders across frequency accuracy, dynamic range, spatial imaging, and chassis build quality to crown the definitive champions for music production, gaming, and multimedia immersion.""",
             category = "Technology",
             author = "Danny Rand",
-            publishedAt = 1476835200000L, // Oct 19, 2016
+            publishedAt = now - 7 * HOUR_MS, // 7 hours ago
             imageUrl = "https://images.unsplash.com/photo-1545454675-3531b543be5d?w=800&q=80",
             isBreaking = false,
             isBookmarked = false,
@@ -126,7 +131,7 @@ We tested ten leading contenders across frequency accuracy, dynamic range, spati
             content = """Gamers looking for weekend thrills can dive into the futuristic warfare simulator without paying a cent. The promotional event features unlocked competitive playlists, access to all twelve operator loadouts, and exclusive cosmetic drop rewards for weekend participants.""",
             category = "Technology",
             author = "Tony Stark",
-            publishedAt = 1476662400000L, // Oct 17, 2016
+            publishedAt = now - 10 * HOUR_MS, // 10 hours ago
             imageUrl = "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?w=800&q=80",
             isBreaking = true,
             isBookmarked = false,
@@ -143,7 +148,7 @@ We tested ten leading contenders across frequency accuracy, dynamic range, spati
             content = """The modest continental spread of dry bagels and instant coffee is officially obsolete. Major hospitality conglomerates are upgrading their value-tier properties with made-to-order Belgian waffles, artisanal cold brew, and hot breakfast protein stations to capture domestic tourism market share.""",
             category = "Foods",
             author = "Tony Stark",
-            publishedAt = 1476576000000L, // Oct 16, 2016
+            publishedAt = now - 14 * HOUR_MS, // 14 hours ago
             imageUrl = "https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?w=800&q=80",
             isBreaking = true,
             isBookmarked = false,
@@ -160,7 +165,7 @@ We tested ten leading contenders across frequency accuracy, dynamic range, spati
             content = """During an industry keynote on interactive entertainment, senior leadership projected that ubiquitous low-latency 5G and fiber networks will transition AAA gaming entirely to cloud server clusters, freeing players from costly hardware upgrade cycles.""",
             category = "Technology",
             author = "Danny Rand",
-            publishedAt = 1476489600000L, // Oct 15, 2016
+            publishedAt = now - 18 * HOUR_MS, // 18 hours ago
             imageUrl = "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&q=80",
             isBreaking = false,
             isBookmarked = false,
@@ -177,7 +182,7 @@ We tested ten leading contenders across frequency accuracy, dynamic range, spati
             content = """Without bitter struggles, triumphant moments lack texture and resonance. Artists, athletes, and culinary masters consistently reflect on periods of doubt and experimental disasters as the crucible wherein authentic signature style is discovered.""",
             category = "Creative",
             author = "Tony Stark",
-            publishedAt = 1476489600000L, // Oct 15, 2016
+            publishedAt = now - 22 * HOUR_MS, // 22 hours ago
             imageUrl = "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=800&q=80",
             isBreaking = false,
             isBookmarked = false,
@@ -198,7 +203,7 @@ We tested ten leading contenders across frequency accuracy, dynamic range, spati
 Supporters queued outside flagships in Madrid and worldwide to celebrate the iconic visual identity, worn by European football's most decorated squad as they pursue back-to-back championship trophies.""",
             category = "Football",
             author = "Tony Stark",
-            publishedAt = 1475712000000L, // Oct 6, 2016
+            publishedAt = now - 1 * DAY_MS, // 1 day ago
             imageUrl = "https://images.unsplash.com/photo-1511886929837-354d827aae26?w=800&q=80",
             isBreaking = false,
             isBookmarked = true,
@@ -215,7 +220,7 @@ Supporters queued outside flagships in Madrid and worldwide to celebrate the ico
             content = """High-intensity functional conditioning requires more than brute strength; it demands unwavering cognitive discipline. In this training breakdown, world-class fitness conditioning coaches share periodized dumbbell circuits, eccentric hypertrophy protocols, and post-session recovery nutrition.""",
             category = "Sports",
             author = "Tony Stark",
-            publishedAt = 1475712000000L, // Oct 6, 2016
+            publishedAt = now - 1 * DAY_MS - 5 * HOUR_MS, // ~1.2 days ago
             imageUrl = "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=800&q=80",
             isBreaking = false,
             isBookmarked = false,
@@ -232,7 +237,7 @@ Supporters queued outside flagships in Madrid and worldwide to celebrate the ico
             content = """EA DICE reveals the full tier contents of the premium edition, showcasing historically authentic Lawrence of Arabia melee tools, Red Baron scout biplane liveries, and specialized multiplayer emblems.""",
             category = "Technology",
             author = "Danny Rand",
-            publishedAt = 1475539200000L, // Oct 4, 2016
+            publishedAt = now - 2 * DAY_MS, // 2 days ago
             imageUrl = "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=800&q=80",
             isBreaking = false,
             isBookmarked = false,
@@ -251,7 +256,7 @@ Supporters queued outside flagships in Madrid and worldwide to celebrate the ico
             content = """From time-boxing and ultradian work sprints to zero-inbox email filters and physical clutter reduction, these twenty-five verified habits eliminate friction and multiply mental bandwidth across deep work sessions.""",
             category = "Technology",
             author = "Tony Stark",
-            publishedAt = 1476230400000L, // Oct 12, 2016
+            publishedAt = now - 2 * DAY_MS - 8 * HOUR_MS, // ~2.3 days ago
             imageUrl = "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=800&q=80",
             isBreaking = true,
             isBookmarked = false,
@@ -268,7 +273,7 @@ Supporters queued outside flagships in Madrid and worldwide to celebrate the ico
             content = """Unveiled at the Paris Motor Show, the Trezor captures breathtaking all-electric performance wrapped in sensuous hexagonal carbon textures, OLED touchscreens, and bespoke red leather interior trim.""",
             category = "Life Style",
             author = "Danny Rand",
-            publishedAt = 1476057600000L, // Oct 10, 2016
+            publishedAt = now - 3 * DAY_MS, // 3 days ago
             imageUrl = "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&q=80",
             isBreaking = false,
             isBookmarked = true,

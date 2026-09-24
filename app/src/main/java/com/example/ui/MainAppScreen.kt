@@ -89,16 +89,37 @@ fun MainAppScreen(
     val publisherForm by viewModel.publisherForm.collectAsStateWithLifecycle()
     val customDomain by viewModel.customDomain.collectAsStateWithLifecycle()
     val activePolicyDialog by viewModel.activePolicyDialog.collectAsStateWithLifecycle()
+    val firebasePingStatus by viewModel.firebasePingStatus.collectAsStateWithLifecycle()
 
     // Full Article Detail Overlay
     selectedArticle?.let { article ->
         BackHandler { viewModel.closeArticle() }
         ArticleDetailScreen(
             article = article,
+            allArticles = allArticles,
+            categories = viewModel.categories,
             onBack = { viewModel.closeArticle() },
+            onSelectArticle = { nextArticle -> viewModel.openArticle(nextArticle) },
             onBookmarkToggle = { viewModel.toggleBookmark(article) },
-            onDelete = { viewModel.deleteArticle(article) }
+            onDelete = { viewModel.deleteArticle(article) },
+            onOpenPolicy = { policy -> viewModel.showPolicyDialog(policy) },
+            onSelectCategory = { cat ->
+                viewModel.selectCategory(cat)
+                viewModel.closeArticle()
+            },
+            onSwitchToAdmin = {
+                viewModel.closeArticle()
+                viewModel.switchToAdmin()
+            }
         )
+
+        // AdSense / Reusable Policy Dialog when viewing article
+        activePolicyDialog?.let { policyType ->
+            PolicyDialog(
+                policyType = policyType,
+                onDismiss = { viewModel.dismissPolicyDialog() }
+            )
+        }
         return
     }
 
@@ -143,7 +164,12 @@ fun MainAppScreen(
             onDeleteArticle = { viewModel.deleteArticle(it) },
             onToggleBreaking = { viewModel.toggleArticleBreaking(it) },
             onArticleClick = { viewModel.openArticle(it) },
-            onOpenPolicy = { viewModel.showPolicyDialog(it) }
+            onOpenPolicy = { viewModel.showPolicyDialog(it) },
+            firebasePingStatus = firebasePingStatus,
+            onTestFirebase = { viewModel.testFirebaseConnection() },
+            onSyncAllFirebase = { viewModel.syncAllToRealtimeDb() },
+            onUpdateFullForm = { viewModel.setPublisherForm(it) },
+            onSaveDraft = { viewModel.saveDraft() }
         )
         return
     }

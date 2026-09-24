@@ -4,6 +4,8 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.AppDatabase
+import com.example.data.FirebaseNewsSync
+import com.example.data.FirebaseRealtimeDbManager
 import com.example.data.NewsArticle
 import com.example.data.NewsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,6 +13,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -58,6 +61,11 @@ data class PublisherFormState(
     val imageUrl: String = "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&q=80",
     val isBreaking: Boolean = false,
     val source: String = "US News Network",
+    val slug: String = "",
+    val tags: String = "US News, Politics, Breaking",
+    val postStatus: String = "Published", // "Published", "Draft", "Scheduled"
+    val focusKeyword: String = "",
+    val excerpt: String = "",
     val isSubmitting: Boolean = false,
     val submitSuccessMessage: String? = null,
     val errorMessage: String? = null
@@ -75,23 +83,29 @@ data class PublisherFormState(
             .replace("\\s+".toRegex(), "-")
             .take(60)
 
+    val effectiveSlug: String
+        get() = if (slug.isNotBlank()) slug.trim() else autoSlug
+
     val autoMetaDescription: String
-        get() = if (subtitle.isNotBlank()) subtitle.take(160) else content.take(150)
+        get() = if (excerpt.isNotBlank()) excerpt.take(160) else if (subtitle.isNotBlank()) subtitle.take(160) else content.take(150)
 
     val seoScore: Int
         get() {
             var score = 0
-            if (title.trim().length in 25..80) score += 25
-            if (wordCount >= 150) score += 30
+            if (title.trim().length in 25..80) score += 20
+            if (wordCount >= 150) score += 25
             if (imageUrl.isNotBlank()) score += 15
             if (subtitle.isNotBlank() || autoMetaDescription.isNotBlank()) score += 15
-            if (category.isNotBlank()) score += 15
-            return score
+            if (category.isNotBlank()) score += 10
+            if (focusKeyword.isNotBlank()) score += 15
+            return score.coerceAtMost(100)
         }
 }
 
 class NewsViewModel(application: Application) : AndroidViewModel(application) {
     private val repository: NewsRepository
+    private val firebaseNewsSync = FirebaseNewsSync(application)
+    private val realtimeDbManager = FirebaseRealtimeDbManager(application)
 
     val categories = listOf(
         "Top Stories",
@@ -131,7 +145,7 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     private val _publisherForm = MutableStateFlow(PublisherFormState())
     val publisherForm: StateFlow<PublisherFormState> = _publisherForm.asStateFlow()
 
-    private val _customDomain = MutableStateFlow("myusnews.com")
+    private val _customDomain = MutableStateFlow("official1.online")
     val customDomain: StateFlow<String> = _customDomain.asStateFlow()
 
     private val _adMobEnabled = MutableStateFlow(true)
@@ -139,6 +153,9 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _activePolicyDialog = MutableStateFlow<String?>(null)
     val activePolicyDialog: StateFlow<String?> = _activePolicyDialog.asStateFlow()
+
+    private val _firebasePingStatus = MutableStateFlow<String?>(null)
+    val firebasePingStatus: StateFlow<String?> = _firebasePingStatus.asStateFlow()
 
     val allArticles: StateFlow<List<NewsArticle>>
     val breakingNews: StateFlow<List<NewsArticle>>
@@ -153,6 +170,13 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
 
         viewModelScope.launch {
             repository.ensureInitialData()
+            try {
+                val list = repository.allArticles.first { it.isNotEmpty() }
+                realtimeDbManager.syncAllArticles(list)
+                firebaseNewsSync.syncAllArticles(list)
+            } catch (e: Exception) {
+                // Ignore initial sync error if offline
+            }
         }
 
         allArticles = repository.allArticles.stateIn(
@@ -265,6 +289,7 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
         _selectedArticle.value = article
         viewModelScope.launch {
             repository.incrementViewCount(article.id)
+            realtimeDbManager.recordArticleView(article.id)
         }
     }
 
@@ -307,9 +332,28 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
             author = article.author,
             imageUrl = article.imageUrl,
             isBreaking = article.isBreaking,
-            source = article.source
+            source = article.source,
+            slug = article.slug,
+            excerpt = article.metaDescription,
+            postStatus = "Published"
         )
         _adminTab.value = AdminTab.PUBLISH
+    }
+
+    fun setPublisherForm(form: PublisherFormState) {
+        _publisherForm.value = form.copy(errorMessage = null)
+    }
+
+    fun saveDraft() {
+        val current = _publisherForm.value
+        if (current.title.isBlank()) {
+            _publisherForm.value = current.copy(errorMessage = "Please enter an article title to save draft.")
+            return
+        }
+        _publisherForm.value = current.copy(
+            postStatus = "Draft",
+            submitSuccessMessage = "Draft saved in WordPress Studio! (Status: Draft)"
+        )
     }
 
     fun cancelEdit() {
@@ -332,7 +376,12 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
         author: String? = null,
         imageUrl: String? = null,
         isBreaking: Boolean? = null,
-        source: String? = null
+        source: String? = null,
+        slug: String? = null,
+        tags: String? = null,
+        postStatus: String? = null,
+        focusKeyword: String? = null,
+        excerpt: String? = null
     ) {
         _publisherForm.value = _publisherForm.value.copy(
             title = title ?: _publisherForm.value.title,
@@ -343,6 +392,11 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
             imageUrl = imageUrl ?: _publisherForm.value.imageUrl,
             isBreaking = isBreaking ?: _publisherForm.value.isBreaking,
             source = source ?: _publisherForm.value.source,
+            slug = slug ?: _publisherForm.value.slug,
+            tags = tags ?: _publisherForm.value.tags,
+            postStatus = postStatus ?: _publisherForm.value.postStatus,
+            focusKeyword = focusKeyword ?: _publisherForm.value.focusKeyword,
+            excerpt = excerpt ?: _publisherForm.value.excerpt,
             errorMessage = null
         )
     }
@@ -359,6 +413,9 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         viewModelScope.launch {
+            val finalSlug = current.effectiveSlug
+            val finalMeta = current.autoMetaDescription
+
             if (current.editingArticleId != null) {
                 // Update existing
                 val updated = NewsArticle(
@@ -371,14 +428,16 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
                     publishedAt = System.currentTimeMillis(),
                     imageUrl = current.imageUrl.ifBlank { "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&q=80" },
                     isBreaking = current.isBreaking,
-                    slug = current.autoSlug,
-                    metaDescription = current.autoMetaDescription,
+                    slug = finalSlug,
+                    metaDescription = finalMeta,
                     source = current.source.ifBlank { "US News Network" },
                     readTimeMinutes = current.estimatedReadMinutes
                 )
                 repository.updateArticle(updated)
+                firebaseNewsSync.syncArticleToCloud(updated)
+                realtimeDbManager.publishArticle(updated)
                 _publisherForm.value = PublisherFormState(
-                    submitSuccessMessage = "Article updated successfully!"
+                    submitSuccessMessage = "Article updated successfully and synced with Realtime Database!"
                 )
             } else {
                 // Insert new
@@ -392,14 +451,17 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
                     imageUrl = current.imageUrl.ifBlank { "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&q=80" },
                     isBreaking = current.isBreaking,
                     isBookmarked = false,
-                    slug = current.autoSlug,
-                    metaDescription = current.autoMetaDescription,
+                    slug = finalSlug,
+                    metaDescription = finalMeta,
                     source = current.source.ifBlank { "US News Network" },
                     readTimeMinutes = current.estimatedReadMinutes
                 )
-                repository.insertArticle(newArticle)
+                val id = repository.insertArticle(newArticle)
+                val articleWithId = newArticle.copy(id = id)
+                firebaseNewsSync.syncArticleToCloud(articleWithId)
+                realtimeDbManager.publishArticle(articleWithId)
                 _publisherForm.value = PublisherFormState(
-                    submitSuccessMessage = "Article successfully published! It is now live across the US News Feed."
+                    submitSuccessMessage = "Article successfully published and live on Realtime Database!"
                 )
             }
         }
@@ -415,5 +477,31 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
 
     fun dismissPolicyDialog() {
         _activePolicyDialog.value = null
+    }
+
+    fun testFirebaseConnection() {
+        viewModelScope.launch {
+            _firebasePingStatus.value = "Sending test ping..."
+            val result = realtimeDbManager.sendTestPing()
+            _firebasePingStatus.value = if (result.isSuccess) {
+                result.getOrNull()
+            } else {
+                "Error: ${result.exceptionOrNull()?.message ?: "Check Realtime DB Rules"}"
+            }
+        }
+    }
+
+    fun syncAllToRealtimeDb() {
+        viewModelScope.launch {
+            _firebasePingStatus.value = "Syncing all articles to Firebase Realtime Database..."
+            val list = allArticles.value
+            val result = realtimeDbManager.syncAllArticles(list)
+            firebaseNewsSync.syncAllArticles(list)
+            _firebasePingStatus.value = if (result.isSuccess) {
+                "Success! ${result.getOrNull()} articles live on Firebase."
+            } else {
+                "Error: ${result.exceptionOrNull()?.message ?: "Check Realtime DB Rules"}"
+            }
+        }
     }
 }

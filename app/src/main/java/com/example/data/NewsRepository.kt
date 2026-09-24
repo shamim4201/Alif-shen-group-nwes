@@ -31,8 +31,16 @@ class NewsRepository(private val newsDao: NewsDao) {
 
     suspend fun ensureInitialData() {
         val article1 = newsDao.getArticleByIdDirect(1)
-        if (article1 == null || article1.publishedAt < 1477700000000L || !article1.title.startsWith("One man")) {
+        if (article1 == null) {
             newsDao.insertAll(SampleData.initialArticles)
+        } else if (article1.publishedAt <= 1477700000000L) {
+            // Upgrade old 2016 timestamps to fresh live timestamps
+            SampleData.initialArticles.forEach { sampleArt ->
+                val existing = newsDao.getArticleByIdDirect(sampleArt.id)
+                if (existing != null && existing.publishedAt <= 1477700000000L) {
+                    newsDao.updateArticle(existing.copy(publishedAt = sampleArt.publishedAt))
+                }
+            }
         }
     }
 }

@@ -73,7 +73,12 @@ fun AdminScreen(
     onDeleteArticle: (NewsArticle) -> Unit,
     onToggleBreaking: (NewsArticle) -> Unit,
     onArticleClick: (NewsArticle) -> Unit,
-    onOpenPolicy: (String) -> Unit
+    onOpenPolicy: (String) -> Unit,
+    firebasePingStatus: String? = null,
+    onTestFirebase: () -> Unit = {},
+    onSyncAllFirebase: () -> Unit = {},
+    onUpdateFullForm: ((PublisherFormState) -> Unit)? = null,
+    onSaveDraft: (() -> Unit)? = null
 ) {
     Scaffold(
         topBar = {
@@ -209,6 +214,9 @@ fun AdminScreen(
                         breakingCount = breakingCount,
                         customDomain = customDomain,
                         topArticles = allArticles,
+                        firebasePingStatus = firebasePingStatus,
+                        onTestFirebase = onTestFirebase,
+                        onSyncAllFirebase = onSyncAllFirebase,
                         onNavigateAdminTab = onSelectAdminTab,
                         onArticleClick = onArticleClick
                     )
@@ -220,7 +228,9 @@ fun AdminScreen(
                         categories = categories,
                         onUpdateForm = onUpdateForm,
                         onSubmit = onPublish,
-                        onClearSuccess = onClearPublishSuccess
+                        onClearSuccess = onClearPublishSuccess,
+                        onUpdateFullForm = onUpdateFullForm,
+                        onSaveDraft = onSaveDraft
                     )
                 }
 

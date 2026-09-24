@@ -70,6 +70,11 @@ import com.example.ui.components.CategoryBadge
 import com.example.ui.components.SocialShareRow
 import com.example.ui.components.SocialShareUtils
 import com.example.ui.theme.NewsGoldAccent
+import androidx.compose.foundation.clickable
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.text.style.TextOverflow
+import com.example.ui.components.AppFooter
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -78,16 +83,37 @@ import java.util.Locale
 @Composable
 fun ArticleDetailScreen(
     article: NewsArticle,
+    allArticles: List<NewsArticle> = emptyList(),
+    categories: List<String> = emptyList(),
     onBack: () -> Unit,
+    onSelectArticle: (NewsArticle) -> Unit = {},
     onBookmarkToggle: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onOpenPolicy: (String) -> Unit = {},
+    onSelectCategory: (String) -> Unit = {},
+    onSwitchToAdmin: () -> Unit = {}
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val scrollState = rememberScrollState()
     var fontScale by remember { mutableFloatStateOf(16f) }
 
     val formattedDate = remember(article.publishedAt) {
-        val sdf = SimpleDateFormat("MMM dd, yyyy • hh:mm a", Locale.US)
-        sdf.format(Date(article.publishedAt))
+        val diff = System.currentTimeMillis() - article.publishedAt
+        val sdf = SimpleDateFormat("MMM dd, yyyy • hh:mm a", Locale.getDefault())
+        val formattedExact = sdf.format(Date(article.publishedAt))
+        val minutes = diff / (60 * 1000)
+        val hours = diff / (60 * 60 * 1000)
+        val days = diff / (24 * 60 * 60 * 1000)
+        val relative = when {
+            diff < 0 -> "Just now"
+            minutes < 1 -> "Just now"
+            minutes < 60 -> "${minutes}m ago"
+            hours < 24 -> "${hours}h ago"
+            days < 7 -> "${days}d ago"
+            else -> null
+        }
+        if (relative != null) "$formattedExact ($relative)" else formattedExact
     }
 
     Scaffold(
@@ -173,7 +199,7 @@ fun ArticleDetailScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
         ) {
             // Hero Image
             if (article.imageUrl.isNotBlank()) {
@@ -378,7 +404,184 @@ fun ArticleDetailScreen(
                 )
 
                 Spacer(modifier = Modifier.height(28.dp))
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // UP NEXT SECTION (Inspired by top modern news layout)
+                val nextArticles = remember(allArticles, article.id) {
+                    allArticles.filter { it.id != article.id }.take(6)
+                }
+
+                if (nextArticles.isNotEmpty()) {
+                    Text(
+                        text = "Up next",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 22.sp
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.testTag("detail_up_next_heading")
+                    )
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    nextArticles.chunked(2).forEach { rowPair ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            rowPair.forEach { nextItem ->
+                                Column(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable { onSelectArticle(nextItem) }
+                                        .testTag("up_next_article_${nextItem.id}")
+                                ) {
+                                    if (nextItem.imageUrl.isNotBlank()) {
+                                        AsyncImage(
+                                            model = ImageRequest.Builder(context)
+                                                .data(nextItem.imageUrl)
+                                                .crossfade(true)
+                                                .build(),
+                                            contentDescription = nextItem.title,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(105.dp)
+                                                .clip(RoundedCornerShape(8.dp))
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                    }
+                                    Text(
+                                        text = nextItem.title,
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            fontWeight = FontWeight.SemiBold,
+                                            lineHeight = 18.sp
+                                        ),
+                                        maxLines = 3,
+                                        overflow = TextOverflow.Ellipsis,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = "${nextItem.readTimeMinutes} MIN READ",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            letterSpacing = 0.5.sp,
+                                            fontSize = 10.sp
+                                        ),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            if (rowPair.size == 1) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(18.dp))
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+
+                // MOST POPULAR SECTION (Numbered 1 to 10 list with bold numbers)
+                val popularArticles = remember(allArticles, article.id) {
+                    allArticles
+                        .sortedByDescending { it.viewCount }
+                        .take(10)
+                }
+
+                if (popularArticles.isNotEmpty()) {
+                    Text(
+                        text = "Most popular",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 22.sp
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.testTag("detail_most_popular_heading")
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    popularArticles.forEachIndexed { index, popularItem ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onSelectArticle(popularItem) }
+                                .padding(vertical = 10.dp)
+                                .testTag("most_popular_article_${popularItem.id}"),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Text(
+                                text = "${index + 1}",
+                                style = MaterialTheme.typography.titleLarge.copy(
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 18.sp
+                                ),
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.width(32.dp)
+                            )
+
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = popularItem.title,
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = FontWeight.Medium,
+                                        lineHeight = 19.sp
+                                    ),
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.height(3.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = popularItem.category,
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 10.sp
+                                        )
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "•  ${popularItem.readTimeMinutes} min read",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            fontSize = 10.sp
+                                        )
+                                    )
+                                }
+                            }
+                        }
+
+                        if (index < popularArticles.lastIndex) {
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                                thickness = 0.8.dp
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(28.dp))
+                }
             }
+
+            // REUSABLE APP FOOTER (Full width, essential links: About, Contact, Privacy, Terms)
+            AppFooter(
+                categories = categories,
+                selectedCategory = article.category,
+                onSelectCategory = onSelectCategory,
+                onOpenPolicy = onOpenPolicy,
+                onBackToTop = {
+                    coroutineScope.launch { scrollState.animateScrollTo(0) }
+                },
+                onSwitchToAdmin = onSwitchToAdmin
+            )
         }
     }
 }

@@ -751,7 +751,21 @@ fun JannahGridCard(
     }
 }
 
-private fun formatJannahDate(timestamp: Long): String {
-    val sdf = SimpleDateFormat("MMMM d, yyyy", Locale.US)
-    return sdf.format(Date(timestamp))
+fun formatJannahDate(timestamp: Long): String {
+    val diff = System.currentTimeMillis() - timestamp
+    if (diff < 0) return "Just now"
+    val minutes = diff / (60 * 1000)
+    val hours = diff / (60 * 60 * 1000)
+    val days = diff / (24 * 60 * 60 * 1000)
+
+    return when {
+        minutes < 1 -> "Just now"
+        minutes < 60 -> "${minutes}m ago"
+        hours < 24 -> "${hours}h ago"
+        days < 7 -> "${days}d ago"
+        else -> {
+            val sdf = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
+            sdf.format(Date(timestamp))
+        }
+    }
 }
